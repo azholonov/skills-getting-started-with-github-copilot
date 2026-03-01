@@ -27,6 +27,63 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
         `;
 
+        // if there are participants, append a list with delete icons
+        if (details.participants && details.participants.length > 0) {
+          const participantsHeader = document.createElement("p");
+          participantsHeader.innerHTML = "<strong>Participants:</strong>";
+          activityCard.appendChild(participantsHeader);
+
+          const list = document.createElement("ul");
+          list.className = "participants";
+          details.participants.forEach((email) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+
+            // Email span
+            const emailSpan = document.createElement("span");
+            emailSpan.textContent = email;
+            emailSpan.className = "participant-email";
+            li.appendChild(emailSpan);
+
+            // Delete icon
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "delete-participant";
+            deleteBtn.title = "Remove participant";
+            deleteBtn.innerHTML = "&#128465;"; // trash can unicode
+            deleteBtn.onclick = async (e) => {
+              e.stopPropagation();
+              // Call API to remove participant
+              try {
+                const res = await fetch(`/activities/${encodeURIComponent(name)}/unregister?email=${encodeURIComponent(email)}`, {
+                  method: "POST"
+                });
+                if (res.ok) {
+                  fetchActivities();
+                  messageDiv.textContent = `Removed ${email} from ${name}`;
+                  messageDiv.className = "success";
+                  messageDiv.classList.remove("hidden");
+                  setTimeout(() => { messageDiv.classList.add("hidden"); }, 3000);
+                } else {
+                  const result = await res.json();
+                  messageDiv.textContent = result.detail || "Failed to remove participant.";
+                  messageDiv.className = "error";
+                  messageDiv.classList.remove("hidden");
+                  setTimeout(() => { messageDiv.classList.add("hidden"); }, 3000);
+                }
+              } catch (err) {
+                messageDiv.textContent = "Network error.";
+                messageDiv.className = "error";
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => { messageDiv.classList.add("hidden"); }, 3000);
+              }
+            };
+            li.appendChild(deleteBtn);
+
+            list.appendChild(li);
+          });
+          activityCard.appendChild(list);
+        }
+
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
@@ -62,6 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
